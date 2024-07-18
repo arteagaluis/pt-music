@@ -4,21 +4,21 @@ import { useEffect, useState } from 'react';
 import { InfoCard } from '../components/InfoCard';
 
 export const Fav = () => {
-  const [tracks, setTracks] = useState('');
+  const [tracks, setTracks] = useState([]);
 
   const loadData = async () => {
-    const loadItem = await getData('items');
-    console.log(loadItem);
+    const loadedItems = await getData('items');
+    if (loadedItems) {
+      setTracks(loadedItems);
+    }
   };
-
   useEffect(() => {
     loadData();
   }, []);
 
   return (
     <View style={styles.container}>
-      <Text>FAVORITE</Text>
-      <InfoCard nav="Details" />
+      <InfoCard nav="Details" tracks={tracks} />
     </View>
   );
 };

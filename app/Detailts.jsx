@@ -12,8 +12,6 @@ export const DetailsScreen = ({ route }) => {
         <Text style={styles.nameArtist}>{artist.name}</Text>
         <Text style={styles.titleSong}>{name}</Text>
       </View>
-
-      <Repro />
     </View>
   );
 };

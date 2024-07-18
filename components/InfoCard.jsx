@@ -8,23 +8,41 @@ import {
 } from 'react-native';
 import iconPlay from '../assets/icon-play.png';
 import iconPause from '../assets/icon-pause.png';
-import iconFav from '../assets/icon-fav.png';
+import iconFavCheck from '../assets/icon-favcheck.png';
+import iconFavPlus from '../assets/icon-favPlus.png';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import { getData, removeData, storeData } from '../function/storage';
+import { storeData } from '../function/storage';
 
 export function InfoCard(props) {
+  const { nav, tracks, useFav } = props;
   const navigation = useNavigation();
   const [playSong, setPlaySong] = useState(false);
   const [idRank, setIdRank] = useState(null);
   const [favorite, setFavorite] = useState([]);
+  const [iconSave, setIconSave] = useState({});
+  const [songs, setSongs] = useState(null);
 
-  const { nav, tracks, useFav } = props;
+  const [repro, setRepro] = useState([]);
+
+  const addMoreRepro = (item) => {
+    setRepro((prevState) => {
+      const updateMostPlayed = [item, ...prevState];
+      const id = updateMostPlayed.find((da) => da['@attr'].rank);
+
+      if (updateMostPlayed.length > 10) {
+        updateMostPlayed.pop();
+      }
+      return updateMostPlayed;
+    });
+  };
 
   const handlePress = (item) => {
-    const data = tracks.find((da) => {
+    const data = songs.find((da) => {
       return da['@attr'].rank === item;
     });
+
+    addMoreRepro(data);
 
     const { name, artist, image } = data;
     const img = image[2]['#text'];
@@ -33,9 +51,11 @@ export function InfoCard(props) {
   };
 
   const handleSong = (item) => {
-    const data = tracks.find((da) => {
+    const data = songs.find((da) => {
       return da['@attr'].rank === item;
     });
+
+    addMoreRepro(data);
 
     setIdRank(data['@attr'].rank);
 
@@ -47,11 +67,39 @@ export function InfoCard(props) {
   };
 
   const saveFav = async (item) => {
-    const data = tracks.find((da) => {
-      return da['@attr'].rank === item;
-    });
+    const data = songs.find((da) => da['@attr'].rank === item);
 
-    setFavorite([...favorite, data]);
+    if (data) {
+      const isFavorite = favorite.some((fav) => fav['@attr'].rank === item);
+
+      if (isFavorite) {
+        // Eliminar el elemento de favoritos
+        const updatedFavorites = favorite.filter(
+          (fav) => fav['@attr'].rank !== item
+        );
+
+        setFavorite(updatedFavorites);
+        setIconSave((prevState) => ({
+          ...prevState,
+          [item]: false,
+        }));
+      } else {
+        // Agregar el elemento a favoritos
+        setFavorite([...favorite, data]);
+        setIconSave((prevState) => ({
+          ...prevState,
+          [item]: true,
+        }));
+      }
+
+      // Actualizar la propiedad isFavorite en tracks
+      const updatedTracks = songs.map((track) =>
+        track['@attr'].rank === item
+          ? { ...track, isFavorite: !isFavorite }
+          : track
+      );
+      setSongs(updatedTracks);
+    }
   };
 
   useEffect(() => {
@@ -67,10 +115,27 @@ export function InfoCard(props) {
     }
   }, [favorite]);
 
+  useEffect(() => {
+    const saveRepro = async () => {
+      try {
+        await storeData('repro', repro);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    if (useFav) {
+      saveRepro();
+    }
+  }, [repro]);
+
+  useEffect(() => {
+    setSongs(tracks);
+  }, [tracks]);
+
   return (
     <>
       <FlatList
-        data={tracks}
+        data={songs}
         keyExtractor={(item) => item['@attr'].rank}
         renderItem={({ item }) => (
           <>
@@ -92,7 +157,11 @@ export function InfoCard(props) {
               <View style={styles.containerIcon}>
                 {useFav && (
                   <TouchableOpacity onPress={() => saveFav(item['@attr'].rank)}>
-                    <Image source={iconFav} style={styles.imgIconFav} />
+                    {iconSave[item['@attr'].rank] ? (
+                      <Image source={iconFavCheck} style={styles.imgIconFav} />
+                    ) : (
+                      <Image source={iconFavPlus} style={styles.imgIconFav} />
+                    )}
                   </TouchableOpacity>
                 )}
 
